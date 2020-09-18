@@ -95,7 +95,7 @@ class HeroShip:
             self.array_fires[i].change_y(10)
             display.blit(self.img_fire, (fire_x, fire_y))
 
-    def check_collician_fire(self, enemy_ship):
+    def check_collician_fire(self, enemy_ship, j, enemy_ships):
         enemy_ship_x = enemy_ship.get_enemy_x()
         enemy_ship_y = enemy_ship.get_enemy_y()
 
@@ -104,7 +104,7 @@ class HeroShip:
             fire_y = self.array_fires[i].get_y()
             if fire_x <= enemy_ship_x + enemy_ship_width and enemy_ship_x <= fire_x:
                 if fire_y <= enemy_ship_y + enemy_ship_height and fire_y >= enemy_ship_y:
-                    del enemy_ship
+                    enemy_ships.pop(j)
                     del self.array_fires[i]
                     self.draw_boom(enemy_ship_x, enemy_ship_y)
 
@@ -200,7 +200,7 @@ def move_enemy_ships(enemy_ships):
 
 def check_collician_fire_hero_for_array_enemy_ships(enemy_ships, hero_ship):
     for i in range(len(enemy_ships) - 1):
-        hero_ship.check_collician_fire(enemy_ships[i])
+        hero_ship.check_collician_fire(enemy_ships[i], i, enemy_ships)
 
 
 def run_game():
