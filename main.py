@@ -131,7 +131,7 @@ class EnemyShip:
         self.img_ship = img_ship = pygame.image.load('./imgs/enemy_ship.png')
         self.img_fire = pygame.image.load('./imgs/fire_enemy.png')
         self.speed = 6
-        self.fire_array = []
+        self.array_fires = []
         self.enemy_x = enemy_x
         self.enemy_y = enemy_y
 
@@ -158,6 +158,23 @@ class EnemyShip:
 
     def draw_enemy(self):
         display.blit(self.img_ship, (self.enemy_x, self.enemy_y))
+
+    def fire(self):
+        fire_x = self.enemy_x + enemy_ship_width // 2 - fire_width // 2
+        fire_y = self.enemy_y + enemy_ship_height + fire_height
+        fire = Pair(fire_x, fire_y)
+        self.array_fires.append(fire)
+
+    def draw_fires(self):
+        for i in range(len(self.array_fires) - 1):
+            if self.array_fires[i].get_y() >= display_height:
+                del self.array_fires[i]
+
+        for i in range(len(self.array_fires) - 1):
+            fire_x = self.array_fires[i].get_x()
+            fire_y = self.array_fires[i].get_y()
+            self.array_fires[i].change_y(-10)
+            display.blit(self.img_fire, (fire_x, fire_y))
 
 
 def print_text(message, x, y, font_size=50, font_color=(255, 255, 255), font_type='./font/font.ttf'):
@@ -198,6 +215,16 @@ def move_enemy_ships(enemy_ships):
         if enemy_ships[i].get_enemy_x() <= (1100 - 200 * i):
             enemy_ships[i].move_right_enemy()
 
+
+def fire_enemy_ships(enemy_ships):
+    for i in range(len(enemy_ships) - 1):
+        enemy_ships[i].fire()
+
+
+def draw_fire_enemy_ships(enemy_ships):
+    for i in range(len(enemy_ships) - 1):
+        enemy_ships[i].draw_fires()
+
 def check_collician_fire_hero_for_array_enemy_ships(enemy_ships, hero_ship):
     for i in range(len(enemy_ships) - 1):
         hero_ship.check_collician_fire(enemy_ships[i], i, enemy_ships)
@@ -211,8 +238,10 @@ def run_game():
     enemy_ships = create_array_enemy_ships(6)
 
     time_ms = int(round(time.time() * 1000))
+    time2_ms = int(round(time.time() * 1000))
     while game:
         diff_time_ms = int(round(time.time() * 1000)) - time_ms
+        diff_time2_ms = int(round(time.time() * 1000)) - time2_ms
         display.blit(background, (0, 0))
 
         for event in pygame.event.get():
@@ -238,6 +267,10 @@ def run_game():
 
         draw_enemy_ships(enemy_ships)
         move_enemy_ships(enemy_ships)
+        if diff_time2_ms >= 600:
+            fire_enemy_ships(enemy_ships)
+            time2_ms = int(round(time.time() * 1000))
+        draw_fire_enemy_ships(enemy_ships)
 
         hero_ship.draw_hero()
         hero_ship.draw_fires()
