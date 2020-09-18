@@ -22,38 +22,36 @@ hero_ship_height = 79
 enemy_ship_width = 80
 enemy_ship_height = 110
 
+fire_width = 10
+fire_height = 35
+
 fps = pygame.time.Clock()
 game = True
 
+
 class Pair:
-    def __init__(self, first, second):
-        self.first = first
-        self.second = second
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
 
-    def get_first(self):
-        return self.first
+    def get_x(self):
+        return self.x
 
-    def get_second(self):
-        return self.second
+    def get_y(self):
+        return self.y
 
-    def change_second(self, value):
-        self.second -= value
+    def change_y(self, value):
+        self.y -= value
 
 
 class HeroShip:
     def __init__(self, hero_x, hero_y):
-        img_ship = pygame.image.load('./imgs/hero_ship.png')
-        img_fire = pygame.image.load('./imgs/fire_hero.png')
         self.array_fires = []
         self.speed = 5
         self.hero_x = hero_x
         self.hero_y = hero_y
-        self.hero_width = hero_ship_width
-        self.hero_height = hero_ship_height
-        self.img_ship = img_ship
-        self.img_fire = img_fire
-        self.boolean_hero_fire = False
-
+        self.img_ship = pygame.image.load('./imgs/hero_ship.png')
+        self.img_fire = pygame.image.load('./imgs/fire_hero.png')
 
     def get_hero_x(self):
         return self.hero_x
@@ -62,58 +60,80 @@ class HeroShip:
         return self.hero_y
 
     def draw_hero(self):
-        display.blit(self.img_ship, (self.hero_x - self.hero_width,
-                                     self.hero_y - self.hero_height))
+        display.blit(self.img_ship, (self.hero_x, self.hero_y))
 
     def move_left_hero(self):
-        if self.hero_x > 80:
+        if self.hero_x > 0:
             self.hero_x -= self.speed
 
     def move_right_hero(self):
-        if self.hero_x < display_width:
+        if self.hero_x < display_width - hero_ship_width:
             self.hero_x += self.speed
 
     def move_up_hero(self):
-        if self.hero_y > 79:
+        if self.hero_y > 0:
             self.hero_y -= self.speed
 
     def move_down_hero(self):
-        if self.hero_y < display_height:
+        if self.hero_y < display_height - hero_ship_height:
             self.hero_y += self.speed
 
-    def hero_fire(self):
-        fire_x = self.hero_x - self.hero_width // 2 - 5
-        fire_y = self.hero_y - self.hero_height - 30
-        self.array_fires.append(Pair(fire_x, fire_y))
-        self.boolean_hero_fire = True
+    def fire(self):
+        fire_x = self.hero_x + hero_ship_width // 2 - fire_width // 2
+        fire_y = self.hero_y - fire_height
+        fire = Pair(fire_x, fire_y)
+        self.array_fires.append(fire)
 
-    def move_fires(self):
+    def draw_fires(self):
         for i in range(len(self.array_fires) - 1):
-            if self.array_fires[i].get_second() <= 0:
+            if self.array_fires[i].get_y() <= 0:
                 del self.array_fires[i]
-        for fire in self.array_fires:
-            fire_x = fire.get_first()
-            fire_y = fire.get_second()
-            fire.change_second(10)
+
+        for i in range(len(self.array_fires) - 1):
+            fire_x = self.array_fires[i].get_x()
+            fire_y = self.array_fires[i].get_y()
+            self.array_fires[i].change_y(10)
             display.blit(self.img_fire, (fire_x, fire_y))
-        if range(len(self.array_fires) - 1) == 0:
-            self.boolean_hero_fire = False
 
+    def check_collician_fire(self, enemy_ship):
+        enemy_ship_x = enemy_ship.get_enemy_x()
+        enemy_ship_y = enemy_ship.get_enemy_y()
 
-    # def hero_destroy(self):
+        for i in range(len(self.array_fires) - 1):
+            fire_x = self.array_fires[i].get_x()
+            fire_y = self.array_fires[i].get_y()
+            if fire_x <= enemy_ship_x + enemy_ship_width and enemy_ship_x <= fire_x:
+                if fire_y <= enemy_ship_y + enemy_ship_height and fire_y >= enemy_ship_y:
+                    del enemy_ship
+                    del self.array_fires[i]
+                    self.draw_boom(enemy_ship_x, enemy_ship_y)
+
+    def draw_boom(self, enemy_ship_x,  enemy_ship_y):
+        image_counter = 0
+        imgs_boom = [pygame.image.load('./imgs/hotpng(0).png'),
+                     pygame.image.load('./imgs/hotpng(1).png'),
+                     pygame.image.load('./imgs/hotpng(2).png'),
+                     pygame.image.load('./imgs/hotpng(3).png'),
+                     pygame.image.load('./imgs/hotpng(4).png'),
+                     pygame.image.load('./imgs/hotpng(5).png')]
+        time_ms = int(round(time.time() * 1000))
+        while image_counter != 6:
+            diff_time_ms = int(round(time.time() * 1000)) - time_ms
+            if diff_time_ms >= 10:
+                display.blit(imgs_boom[image_counter], (enemy_ship_x,  enemy_ship_y))
+                time_ms = int(round(time.time() * 1000))
+                pygame.display.update()
+                image_counter += 1
 
 
 class EnemyShip:
     def __init__(self, enemy_x, enemy_y):
-        img_ship = pygame.image.load('./imgs/enemy_ship.png')
+        self.img_ship = img_ship = pygame.image.load('./imgs/enemy_ship.png')
         self.img_fire = pygame.image.load('./imgs/fire_enemy.png')
         self.speed = 6
+        self.fire_array = []
         self.enemy_x = enemy_x
         self.enemy_y = enemy_y
-        self.enemy_width = enemy_ship_width
-        self.enemy_height = enemy_ship_height
-        self.img_ship = img_ship
-        self.array_fires = []
 
     def get_img(self):
         return self.img_ship
@@ -124,15 +144,11 @@ class EnemyShip:
     def get_enemy_y(self):
         return self.enemy_y
 
-    def draw_enemy(self):
-        display.blit(self.img_ship, (self.enemy_x - self.enemy_width,
-                                     self.enemy_y - self.enemy_height))
-
     def move_left_enemy(self):
         self.enemy_x -= self.speed
 
     def move_right_enemy(self):
-        self.enemy_x += 1
+        self.enemy_x += self.speed
 
     def move_up_enemy(self):
         self.enemy_y -= self.speed
@@ -140,45 +156,8 @@ class EnemyShip:
     def move_down_enemy(self):
         self.enemy_y += self.speed
 
-    def enemy_fire(self):
-        fire_x = self.enemy_x - self.enemy_width // 2 + 80
-        fire_y = self.enemy_y + self.enemy_height - 4
-        self.array_fires.append(Pair(fire_x, fire_y))
-
-    def move_fires(self, hero_x, hero_y):
-        for i in range(len(self.array_fires) - 1):
-            if self.array_fires[i].get_second() > 720:  # не трогать
-                del self.array_fires[i]
-        for fire in self.array_fires:
-            fire_x = fire.get_first()
-            fire_y = fire.get_second()
-            fire.change_second(-5) # тоже не трогать
-            if fire_x > hero_x and fire_x < hero_x + hero_ship_width:
-                print_text('OK', 60, 150)
-            else:
-                print_text('Fail', 60, 100)
-            display.blit(self.img_fire, (fire_x, fire_y))
-
-
-    # def enemy_destroy(self):
-
-
-def create_array_enemy():
-    array_enemy_ships = []
-    for i in range(7):
-        array_enemy_ships.append(EnemyShip(0 - 200 * i, display_height - 610))
-    return array_enemy_ships
-
-
-def draw_enemy_ships(array_enemy_ships):
-    for i in range(len(array_enemy_ships) - 1):
-        display.blit(array_enemy_ships[i].get_img(),
-                    (array_enemy_ships[i].get_enemy_x(), array_enemy_ships[i].get_enemy_y()))
-
-
-def move_enemy_ships(array_enemy_ships):
-    for i in range(len(array_enemy_ships) - 1):
-        array_enemy_ships[i].move_right_enemy()
+    def draw_enemy(self):
+        display.blit(self.img_ship, (self.enemy_x, self.enemy_y))
 
 
 def print_text(message, x, y, font_size=50, font_color=(255, 255, 255), font_type='./font/font.ttf'):
@@ -194,9 +173,7 @@ def pause():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
-
             print_text('Paused. Press enter to continue', 150, 360)
-
             keys = pygame.key.get_pressed()
             if keys[pygame.K_RETURN]:
                 paused = False
@@ -204,16 +181,38 @@ def pause():
             fps.tick(15)
 
 
+def create_array_enemy_ships(count):
+    enemy_ships = []
+    for i in range(count + 1):
+        enemy_ships.append(EnemyShip(500 - 200 * i, 100))
+    return enemy_ships
+
+
+def draw_enemy_ships(enemy_ships):
+    for i in range(len(enemy_ships) - 1):
+        enemy_ships[i].draw_enemy()
+
+
+def move_enemy_ships(enemy_ships):
+    for i in range(len(enemy_ships) - 1):
+        if enemy_ships[i].get_enemy_x() <= (1100 - 200 * i):
+            enemy_ships[i].move_right_enemy()
+
+def check_collician_fire_hero_for_array_enemy_ships(enemy_ships, hero_ship):
+    for i in range(len(enemy_ships) - 1):
+        hero_ship.check_collician_fire(enemy_ships[i])
+
+
 def run_game():
     background = pygame.image.load('./imgs/background.jpg')
+    hero_ship = HeroShip(display_width // 2 - hero_ship_width // 2,
+                         display_height // 2 + hero_ship_height)
 
-    hero_ship = HeroShip(display_width // 2, display_height - 20)
-    array_enemy_ships = create_array_enemy()
-    last_time_m = int(round(time.time() * 1000))
-    last_time_ms = int(round(time.time() * 1000))
+    enemy_ships = create_array_enemy_ships(6)
+
+    time_ms = int(round(time.time() * 1000))
     while game:
-        diff_time_ms2 = int(round(time.time() * 1000)) - last_time_m
-        diff_time_ms = int(round(time.time() * 1000)) - last_time_ms
+        diff_time_ms = int(round(time.time() * 1000)) - time_ms
         display.blit(background, (0, 0))
 
         for event in pygame.event.get():
@@ -231,24 +230,18 @@ def run_game():
             hero_ship.move_up_hero()
         if keys[pygame.K_DOWN]:
             hero_ship.move_down_hero()
+
         if diff_time_ms >= 200:
             if keys[pygame.K_SPACE]:
-                hero_ship.hero_fire()
-            last_time_ms = int(round(time.time() * 1000))
+                hero_ship.fire()
+            time_ms = int(round(time.time() * 1000))
 
-        if hero_ship.boolean_hero_fire:
-            hero_ship.move_fires()
+        draw_enemy_ships(enemy_ships)
+        move_enemy_ships(enemy_ships)
 
         hero_ship.draw_hero()
-        draw_enemy_ships(array_enemy_ships)
-
-        for i in range(len(array_enemy_ships) - 1):
-            if array_enemy_ships[i].get_enemy_x() < 500 - i * enemy_ship_width:
-                move_enemy_ships(array_enemy_ships)
-            elif diff_time_ms2 >= 1000:
-                array_enemy_ships[i].enemy_fire()
-                last_time_m = int(round(time.time() * 1000))
-            array_enemy_ships[i].move_fires(hero_ship.get_hero_x(), hero_ship.get_hero_y())
+        hero_ship.draw_fires()
+        check_collician_fire_hero_for_array_enemy_ships(enemy_ships, hero_ship)
 
         if keys[pygame.K_ESCAPE]:
             pause()
