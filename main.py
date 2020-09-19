@@ -1,5 +1,18 @@
 import pygame
 import time
+import sys
+import os
+
+
+def resource_path(relative_path):
+    try:
+    # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 
 pygame.init()
 
@@ -10,11 +23,14 @@ pygame.display.set_caption('Star Battle')
 
 
 # icon 32*32
-icon = pygame.image.load('./imgs/icon.png')
+icon = pygame.image.load(resource_path('./imgs/icon.png'))
 pygame.display.set_icon(icon)
 
-pygame.mixer.music.load('./sound/fon_sound.mp3')
-pygame.mixer.music.play()
+pygame.mixer.music.load(resource_path('./sound/fon_sound.mp3'))
+pygame.mixer.music.play(loops=-1)
+
+sound_boom = pygame.mixer.Sound(resource_path('./sound/boom.wav'))
+lose_health_hero = pygame.mixer.Sound(resource_path('./sound/loss.wav'))
 
 hero_ship_width = 80
 hero_ship_height = 79
@@ -50,9 +66,9 @@ class HeroShip:
         self.speed = 10
         self.hero_x = hero_x
         self.hero_y = hero_y
-        self.img_ship = pygame.image.load('./imgs/hero_ship.png')
-        self.img_fire = pygame.image.load('./imgs/fire_hero.png')
-        self.img_health = pygame.image.load('./imgs/icon.png')
+        self.img_ship = pygame.image.load(resource_path('./imgs/hero_ship.png'))
+        self.img_fire = pygame.image.load(resource_path('./imgs/fire_hero.png'))
+        self.img_health = pygame.image.load(resource_path('./imgs/icon.png'))
         self.health = 5
 
     def minus_health_unit(self):
@@ -111,18 +127,19 @@ class HeroShip:
                 if fire_y <= enemy_ship_y + enemy_ship_height and fire_y >= enemy_ship_y:
                     if enemy_ships[j].get_health() == 0:
                         enemy_ships.pop(j)
+                    sound_boom.play()
                     enemy_ships[j].minus_health_unit()
                     del self.array_fires[i]
                     self.draw_boom(enemy_ship_x, enemy_ship_y)
 
     def draw_boom(self, enemy_ship_x,  enemy_ship_y):
         image_counter = 0
-        imgs_boom = [pygame.image.load('./imgs/hotpng(0).png'),
-                     pygame.image.load('./imgs/hotpng(1).png'),
-                     pygame.image.load('./imgs/hotpng(2).png'),
-                     pygame.image.load('./imgs/hotpng(3).png'),
-                     pygame.image.load('./imgs/hotpng(4).png'),
-                     pygame.image.load('./imgs/hotpng(5).png')]
+        imgs_boom = [pygame.image.load(resource_path('./imgs/hotpng(0).png')),
+                     pygame.image.load(resource_path('./imgs/hotpng(1).png')),
+                     pygame.image.load(resource_path('./imgs/hotpng(2).png')),
+                     pygame.image.load(resource_path('./imgs/hotpng(3).png')),
+                     pygame.image.load(resource_path('./imgs/hotpng(4).png')),
+                     pygame.image.load(resource_path('./imgs/hotpng(5).png'))]
         time_ms = int(round(time.time() * 1000))
         while image_counter != 6:
             diff_time_ms = int(round(time.time() * 1000)) - time_ms
@@ -141,8 +158,8 @@ class HeroShip:
 
 class EnemyShip:
     def __init__(self, enemy_x, enemy_y):
-        self.img_ship = img_ship = pygame.image.load('./imgs/enemy_ship.png')
-        self.img_fire = pygame.image.load('./imgs/fire_enemy.png')
+        self.img_ship = img_ship = pygame.image.load(resource_path('./imgs/enemy_ship.png'))
+        self.img_fire = pygame.image.load(resource_path('./imgs/fire_enemy.png'))
         self.speed = 6
         self.array_fires = []
         self.enemy_x = enemy_x
@@ -206,11 +223,12 @@ class EnemyShip:
             if fire_x <= hero_ship_x + hero_ship_width and hero_ship_x <= fire_x:
                 if fire_y <= hero_ship_y + hero_ship_height and fire_y >= hero_ship_y:
                     del self.array_fires[i]
+                    lose_health_hero.play()
                     hero_ship.minus_health_unit()
 
 
 def print_text(message, x, y, font_size=50, font_color=(255, 255, 255), font_type='./font/font.ttf'):
-    font_type = pygame.font.Font(font_type, font_size)
+    font_type = pygame.font.Font(resource_path(font_type), font_size)
     text = font_type.render(message, True, font_color)
     display.blit(text, (x, y))
 
@@ -230,10 +248,10 @@ def pause():
             fps.tick(15)
 
 
-def create_array_enemy_ships(count):
+def create_array_enemy_ships(count, begin_x, begin_y, speed_move):
     enemy_ships = []
     for i in range(count + 1):
-        enemy_ships.append(EnemyShip(-100 - 200 * i, 100))
+        enemy_ships.append(EnemyShip(begin_x + speed_move * i, begin_y))
     return enemy_ships
 
 
@@ -242,10 +260,16 @@ def draw_enemy_ships(enemy_ships):
         enemy_ships[i].draw_enemy()
 
 
-def move_enemy_ships(enemy_ships):
+def move_enemy_ships_right(enemy_ships):
     for i in range(len(enemy_ships) - 1):
         if enemy_ships[i].get_enemy_x() <= (1100 - 200 * i):
             enemy_ships[i].move_right_enemy()
+
+
+def move_enemy_ships_left(enemy_ships):
+    for i in range(len(enemy_ships) - 1):
+        if enemy_ships[i].get_enemy_x() >= (1100 - 200 * i):
+            enemy_ships[i].move_left_enemy()
 
 
 def fire_enemy_ships(enemy_ships):
@@ -267,7 +291,7 @@ def check_collision_fire(enemy_ships, hero_ship):
 def check_is_you_lose(hero_ship_health):
     show_text = True
     if hero_ship_health == 0:
-        display.blit(pygame.image.load('./imgs/background.jpg'), (0, 0))
+        display.blit(pygame.image.load(resource_path('./imgs/background.jpg')), (0, 0))
         while show_text:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -288,13 +312,18 @@ def check_for_lvl_two(enemy_ships):
         return True
 
 
+def check_for_boss(enemy_ships):
+    if len(enemy_ships) - 1 == 0:
+        return True
+
 
 def run_game():
-    background = pygame.image.load('./imgs/background.jpg')
+    background = pygame.image.load(resource_path('./imgs/background.jpg'))
     hero_ship = HeroShip(display_width // 2 - hero_ship_width // 2,
                          display_height // 2 + hero_ship_height)
 
-    enemy_ships = create_array_enemy_ships(6)
+    enemy_ships = create_array_enemy_ships(6, -100, 100, -200)
+    enemy_ships2 = create_array_enemy_ships(6, display_width + 100, 200, 200)
 
     time_ms = int(round(time.time() * 1000))
     time2_ms = int(round(time.time() * 1000))
@@ -326,11 +355,14 @@ def run_game():
             time_ms = int(round(time.time() * 1000))
 
         draw_enemy_ships(enemy_ships)
-        move_enemy_ships(enemy_ships)
+        draw_enemy_ships(enemy_ships2)
+        move_enemy_ships_right(enemy_ships)
         if diff_time2_ms >= 600:
             fire_enemy_ships(enemy_ships)
+            fire_enemy_ships(enemy_ships2)
             time2_ms = int(round(time.time() * 1000))
         draw_fire_enemy_ships(enemy_ships)
+        draw_fire_enemy_ships(enemy_ships2)
 
         hero_ship.draw_hero()
         hero_ship.draw_fires()
@@ -342,7 +374,10 @@ def run_game():
             pause()
 
         if check_for_lvl_two(enemy_ships):
-            enemy_ships = create_array_enemy_ships(6)
+            move_enemy_ships_left(enemy_ships2)
+            check_collision_fire(enemy_ships2, hero_ship)
+
+        #if check_for_boss(enemy_ships2):
 
         fps.tick(200)
         pygame.display.update()
