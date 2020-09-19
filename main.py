@@ -47,11 +47,16 @@ class Pair:
 class HeroShip:
     def __init__(self, hero_x, hero_y):
         self.array_fires = []
-        self.speed = 5
+        self.speed = 10
         self.hero_x = hero_x
         self.hero_y = hero_y
         self.img_ship = pygame.image.load('./imgs/hero_ship.png')
         self.img_fire = pygame.image.load('./imgs/fire_hero.png')
+        self.img_health = pygame.image.load('./imgs/icon.png')
+        self.health = 5
+
+    def minus_health_unit(self):
+        self.health -= 1
 
     def get_hero_x(self):
         return self.hero_x
@@ -95,7 +100,7 @@ class HeroShip:
             self.array_fires[i].change_y(10)
             display.blit(self.img_fire, (fire_x, fire_y))
 
-    def check_collician_fire(self, enemy_ship, j, enemy_ships):
+    def check_collision_fire(self, enemy_ship, j, enemy_ships):
         enemy_ship_x = enemy_ship.get_enemy_x()
         enemy_ship_y = enemy_ship.get_enemy_y()
 
@@ -104,7 +109,9 @@ class HeroShip:
             fire_y = self.array_fires[i].get_y()
             if fire_x <= enemy_ship_x + enemy_ship_width and enemy_ship_x <= fire_x:
                 if fire_y <= enemy_ship_y + enemy_ship_height and fire_y >= enemy_ship_y:
-                    enemy_ships.pop(j)
+                    if enemy_ships[j].get_health() == 0:
+                        enemy_ships.pop(j)
+                    enemy_ships[j].minus_health_unit()
                     del self.array_fires[i]
                     self.draw_boom(enemy_ship_x, enemy_ship_y)
 
@@ -125,6 +132,12 @@ class HeroShip:
                 pygame.display.update()
                 image_counter += 1
 
+    def draw_health(self):
+        x = 20
+        for i in range(self.health):
+            display.blit(self.img_health, (x, 30))
+            x += 40
+
 
 class EnemyShip:
     def __init__(self, enemy_x, enemy_y):
@@ -134,6 +147,13 @@ class EnemyShip:
         self.array_fires = []
         self.enemy_x = enemy_x
         self.enemy_y = enemy_y
+        self.health = 2
+
+    def minus_health_unit(self):
+        self.health -= 1
+
+    def get_health(self):
+        return self.health
 
     def get_img(self):
         return self.img_ship
@@ -176,6 +196,18 @@ class EnemyShip:
             self.array_fires[i].change_y(-10)
             display.blit(self.img_fire, (fire_x, fire_y))
 
+    def check_collision_for_enemy(self, hero_ship):
+        hero_ship_x = hero_ship.get_hero_x()
+        hero_ship_y = hero_ship.get_hero_y()
+
+        for i in range(len(self.array_fires) - 1):
+            fire_x = self.array_fires[i].get_x()
+            fire_y = self.array_fires[i].get_y()
+            if fire_x <= hero_ship_x + hero_ship_width and hero_ship_x <= fire_x:
+                if fire_y <= hero_ship_y + hero_ship_height and fire_y >= hero_ship_y:
+                    del self.array_fires[i]
+                    hero_ship.minus_health_unit()
+
 
 def print_text(message, x, y, font_size=50, font_color=(255, 255, 255), font_type='./font/font.ttf'):
     font_type = pygame.font.Font(font_type, font_size)
@@ -201,7 +233,7 @@ def pause():
 def create_array_enemy_ships(count):
     enemy_ships = []
     for i in range(count + 1):
-        enemy_ships.append(EnemyShip(500 - 200 * i, 100))
+        enemy_ships.append(EnemyShip(-100 - 200 * i, 100))
     return enemy_ships
 
 
@@ -225,9 +257,36 @@ def draw_fire_enemy_ships(enemy_ships):
     for i in range(len(enemy_ships) - 1):
         enemy_ships[i].draw_fires()
 
-def check_collician_fire_hero_for_array_enemy_ships(enemy_ships, hero_ship):
+
+def check_collision_fire(enemy_ships, hero_ship):
     for i in range(len(enemy_ships) - 1):
-        hero_ship.check_collician_fire(enemy_ships[i], i, enemy_ships)
+        hero_ship.check_collision_fire(enemy_ships[i], i, enemy_ships)
+        enemy_ships[i].check_collision_for_enemy(hero_ship)
+
+
+def check_is_you_lose(hero_ship_health):
+    show_text = True
+    if hero_ship_health == 0:
+        display.blit(pygame.image.load('./imgs/background.jpg'), (0, 0))
+        while show_text:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()
+            print_text('You lose. Press enter to start the game again', 150, display_height // 2 - 25, 35)
+            pygame.display.update()
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_RETURN]:
+                show_text = False
+                run_game()
+            pygame.display.update()
+            fps.tick(15)
+
+
+def check_for_lvl_two(enemy_ships):
+    if len(enemy_ships) - 1 == 0:
+        return True
+
 
 
 def run_game():
@@ -239,6 +298,7 @@ def run_game():
 
     time_ms = int(round(time.time() * 1000))
     time2_ms = int(round(time.time() * 1000))
+
     while game:
         diff_time_ms = int(round(time.time() * 1000)) - time_ms
         diff_time2_ms = int(round(time.time() * 1000)) - time2_ms
@@ -260,7 +320,7 @@ def run_game():
         if keys[pygame.K_DOWN]:
             hero_ship.move_down_hero()
 
-        if diff_time_ms >= 200:
+        if diff_time_ms >= 300:
             if keys[pygame.K_SPACE]:
                 hero_ship.fire()
             time_ms = int(round(time.time() * 1000))
@@ -274,10 +334,15 @@ def run_game():
 
         hero_ship.draw_hero()
         hero_ship.draw_fires()
-        check_collician_fire_hero_for_array_enemy_ships(enemy_ships, hero_ship)
+        hero_ship.draw_health()
+        check_collision_fire(enemy_ships, hero_ship)
+        check_is_you_lose(hero_ship.health)
 
         if keys[pygame.K_ESCAPE]:
             pause()
+
+        if check_for_lvl_two(enemy_ships):
+            enemy_ships = create_array_enemy_ships(6)
 
         fps.tick(200)
         pygame.display.update()
